@@ -15,7 +15,6 @@ Sistema de consulta de CEP com rastreamento distribuído usando OpenTelemetry, Z
 
 - Docker
 - Docker Compose
-- Make (opcional)
 
 ### 1. Configuração Inicial
 
