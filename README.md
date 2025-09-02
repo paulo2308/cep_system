@@ -20,8 +20,7 @@ Sistema de consulta de CEP com rastreamento distribuído usando OpenTelemetry, Z
 
 ```bash
 # Clone o repositório
-git clone <repository-url>
-cd sistema_cep
+git clone https://github.com/paulo2308/cep_system.git
 ```
 
 ### 2. Configure sua API Key
