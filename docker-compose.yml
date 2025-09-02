@@ -1,0 +1,81 @@
+services:
+  # Service A - API Gateway
+  service-a:
+    build: 
+      context: ./service-a
+      dockerfile: Dockerfile
+    container_name: sistema-cep-service-a
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=service-a
+      - SERVICE_B_URL=http://service-b:8080
+    ports:
+      - "${SERVICE_A_PORT:-8081}:8081"
+    depends_on:
+      otel-collector:
+        condition: service_started
+      service-b:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - sistema-cep-network
+
+  # Service B - Weather Service
+  service-b:
+    build: 
+      context: ./service-b
+      dockerfile: Dockerfile
+    container_name: sistema-cep-service-b
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=service-b
+      - WEATHER_API_KEY=${WEATHER_API_KEY}
+    ports:
+      - "${SERVICE_B_PORT:-8080}:8080"
+    depends_on:
+      otel-collector:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - sistema-cep-network
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.106.1
+    container_name: sistema-cep-otel-collector
+    command: ["--config=/etc/otelcol-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-config.yaml:ro
+    ports:
+      - "${OTEL_GRPC_PORT:-4317}:4317"  # OTLP gRPC
+      - "${OTEL_HTTP_PORT:-4318}:4318"  # OTLP HTTP
+    depends_on:
+      zipkin:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - sistema-cep-network
+
+  # Zipkin - Distributed Tracing UI
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: sistema-cep-zipkin
+    ports:
+      - "${ZIPKIN_PORT:-9411}:9411"
+    environment:
+      - STORAGE_TYPE=mem
+      - JAVA_OPTS=-Xms512m -Xmx512m
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9411/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - sistema-cep-network
+
+networks:
+  sistema-cep-network:
+    driver: bridge
+    name: sistema-cep-network
